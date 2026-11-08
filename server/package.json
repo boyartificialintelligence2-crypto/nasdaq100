@@ -1,13 +1,14 @@
 {
-  "name": "nasdaq100",
+  "name": "nasdaq100-server",
   "private": true,
+  "type": "module",
   "scripts": {
-    "install:all": "npm install && npm install --prefix server && npm install --prefix client",
-    "dev": "concurrently -n server,client \"npm run dev --prefix server\" \"npm run dev --prefix client\"",
-    "build": "npm install --prefix server && npm install --prefix client --include=dev && npm run build --prefix client",
-    "start": "node server/server.js"
+    "dev": "node --watch server.js",
+    "start": "node server.js"
   },
-  "devDependencies": {
-    "concurrently": "^9.0.1"
+  "dependencies": {
+    "cors": "^2.8.5",
+    "dotenv": "^16.4.5",
+    "express": "^4.21.0"
   }
 }
