@@ -8,29 +8,47 @@ const fmtCap = (m) => {
 };
 const fmtPrice = (p) => (p == null ? "—" : `$${p.toFixed(2)}`);
 
-export default function App() {
+export function NavBar({ active }) {
+  const link = (href, label, key) => (
+    <a href={href} className={"nav-link" + (active === key ? " active fw-semibold" : "")}>{label}</a>
+  );
+  return (
+    <nav className="navbar navbar-expand navbar-dark bg-dark mb-4">
+      <div className="container">
+        <a className="navbar-brand fw-semibold" href="/">📈 Market Explorer</a>
+        <div className="navbar-nav ms-auto">
+          {link("/nasdaq100", "Nasdaq 100", "nasdaq100")}
+          {link("/sp500", "S&P 500", "sp500")}
+        </div>
+      </div>
+    </nav>
+  );
+}
+
+export default function App({ index = "nasdaq100", title = "Nasdaq 100" }) {
   const [data, setData] = useState({ stocks: [], loaded: 0, total: 100 });
   const [error, setError] = useState("");
   const [query, setQuery] = useState("");
   const [sort, setSort] = useState({ key: "marketCap", dir: "desc" });
 
   useEffect(() => {
+    document.title = `${title} companies`;
     let timer;
     const load = async () => {
       try {
-        const res = await fetch("/api/stocks");
+        const res = await fetch(`/api/stocks?index=${index}`);
         const json = await res.json();
         setData(json);
         setError("");
-        if (json.loaded < json.total) timer = setTimeout(load, 5000);
+        if (json.loaded < json.total) timer = setTimeout(load, 8000);
       } catch {
         setError("Cannot reach the backend. Is the server running on port 3001?");
-        timer = setTimeout(load, 5000);
+        timer = setTimeout(load, 8000);
       }
     };
     load();
     return () => clearTimeout(timer);
-  }, []);
+  }, [index, title]);
 
   const rows = useMemo(() => {
     const q = query.trim().toLowerCase();
@@ -56,14 +74,11 @@ export default function App() {
 
   return (
     <>
-      <nav className="navbar navbar-dark bg-dark mb-4">
-        <div className="container">
-          <span className="navbar-brand fw-semibold">📈 Nasdaq 100 Explorer</span>
-          <span className="navbar-text small">Data: Finnhub</span>
-        </div>
-      </nav>
+      <NavBar active={index} />
 
       <div className="container pb-5">
+        <h1 className="h3 mb-3">{title} companies</h1>
+
         <div className="row g-3 align-items-center mb-3">
           <div className="col-md-6">
             <input className="form-control" placeholder="Search by ticker or company…"
@@ -78,7 +93,8 @@ export default function App() {
 
         {data.loaded < data.total && !error && (
           <div className="alert alert-info">
-            Loading data from Finnhub (free plan is rate-limited, this takes a few minutes the first time)…
+            Loading data from Finnhub. The free plan is rate-limited, so the first load can take a while
+            {index === "sp500" ? " (30 minutes or more for the S&P 500)" : ""}. Companies appear as they arrive.
             <div className="progress mt-2" style={{ height: 8 }}>
               <div className="progress-bar progress-bar-striped progress-bar-animated" style={{ width: `${pct}%` }} />
             </div>
@@ -102,7 +118,8 @@ export default function App() {
             </thead>
             <tbody>
               {rows.map((s) => (
-                <tr key={s.symbol}>
+                <tr key={s.symbol} style={{ cursor: "pointer" }}
+                    onClick={() => window.open(`/stock/${s.symbol}`, "_blank", "noopener")}>
                   <td>
                     {s.logo ? (
                       <img src={s.logo} alt={s.symbol} width="36" height="36"
@@ -113,7 +130,13 @@ export default function App() {
                     )}
                   </td>
                   <td className="fw-bold">{s.symbol}</td>
-                  <td>{s.name}</td>
+                  <td>
+                    <a href={`/stock/${s.symbol}`} target="_blank" rel="noopener noreferrer"
+                       onClick={(e) => e.stopPropagation()}
+                       className="link-dark link-underline-opacity-0 link-underline-opacity-100-hover">
+                      {s.name}
+                    </a>
+                  </td>
                   <td className="text-end fw-bold">{fmtPrice(s.price)}</td>
                   <td className={"text-end " + (s.change > 0 ? "text-success" : s.change < 0 ? "text-danger" : "")}>
                     {s.change == null ? "—" : `${s.change > 0 ? "+" : ""}${s.change.toFixed(2)} (${s.changePct > 0 ? "+" : ""}${s.changePct.toFixed(2)}%)`}
